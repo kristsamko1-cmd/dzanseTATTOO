@@ -22,13 +22,14 @@ async function resolveAuthUser(session: Session | null): Promise<AuthUser | null
   }
 }
 
-export async function getCurrentAuthUser() {
+export async function getCurrentAuthUser(): Promise<AuthUser | null> {
   const { data, error } = await supabase.auth.getSession()
   if (error) throw error
+
   return resolveAuthUser(data.session)
 }
 
-export async function signIn(email: string, password: string) {
+export async function signIn(email: string, password: string): Promise<AuthUser | null> {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -39,7 +40,7 @@ export async function signIn(email: string, password: string) {
   return resolveAuthUser(data.session)
 }
 
-export async function signOut() {
+export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
@@ -50,7 +51,7 @@ export async function signUpTattooer(input: {
   name: string
   bio: string
   specialties: string[]
-}) {
+}): Promise<AuthUser | null> {
   const { data, error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
@@ -64,7 +65,9 @@ export async function signUpTattooer(input: {
 
   if (error) throw error
 
-  return data.user
+  if (!data.session) return null
+
+  return resolveAuthUser(data.session)
 }
 
 export function onAuthStateChanged(callback: () => void) {

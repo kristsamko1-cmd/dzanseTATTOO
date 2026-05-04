@@ -30,7 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true
-    void (async () => {
+
+    ;(async () => {
       try {
         const next = await authService.getCurrentAuthUser()
         if (active) setUser(next)
@@ -38,21 +39,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (active) setLoading(false)
       }
     })()
+
     const stop = authService.onAuthStateChanged(() => {
       void refresh()
     })
+
     return () => {
       active = false
       stop()
     }
   }, [refresh])
 
-  const signIn = useCallback<AuthContextValue['signIn']>(async (email, password) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const next = await authService.signIn(email, password)
     setUser(next)
   }, [])
 
-  const signUpTattooer = useCallback<AuthContextValue['signUpTattooer']>(async (input) => {
+  const signUpTattooer = useCallback(async (input: {
+    email: string
+    password: string
+    name: string
+    bio: string
+    specialties: string[]
+  }) => {
     const next = await authService.signUpTattooer(input)
     setUser(next)
   }, [])
@@ -62,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }, [])
 
-  const value = useMemo<AuthContextValue>(
+  const value = useMemo(
     () => ({ user, loading, signIn, signUpTattooer, signOut, refresh }),
     [user, loading, signIn, signUpTattooer, signOut, refresh],
   )
