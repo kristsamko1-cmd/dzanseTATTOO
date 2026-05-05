@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../state/auth'
 import { useFeed } from '../state/feed'
-import { uploadPostImage } from '../services/storageService'
+import { uploadArtistAvatar, uploadPostImages } from '../services/storageService'
+import { upsertArtistProfile } from '../services/artistsService'
+import { listCategories } from '../services/feedService'
+import type { Category, ID } from '../types/domain'
 
 export function TattooerPortalPage() {
   const auth = useAuth()
@@ -11,9 +14,17 @@ export function TattooerPortalPage() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
-  const [specialties, setSpecialties] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [instagramUrl, setInstagramUrl] = useState('https://www.instagram.com/dzanes_tattoo/')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [specialtyCategoryIds, setSpecialtyCategoryIds] = useState<ID[]>([])
+
   const [description, setDescription] = useState('')
-  const [file, setFile] = useState<File | null>(null)
+  const [title, setTitle] = useState('')
+  const [location, setLocation] = useState('')
+  const [style, setStyle] = useState('')
+  const [postFiles, setPostFiles] = useState<File[]>([])
+  const [postCategoryIds, setPostCategoryIds] = useState<ID[]>([])
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -23,15 +34,38 @@ export function TattooerPortalPage() {
       password.length >= 6 &&
       name.trim().length >= 2 &&
       bio.trim().length >= 10 &&
+      avatarFile !== null &&
+      specialtyCategoryIds.length > 0 &&
+      instagramUrl.trim().length > 5 &&
       !busy
     )
-  }, [email, password, name, bio, busy])
+  }, [email, password, name, bio, avatarFile, specialtyCategoryIds.length, instagramUrl, busy])
 
   const canLogin = useMemo(() => email.includes('@') && password.length >= 6 && !busy, [email, password, busy])
   const canCreatePost = useMemo(
-    () => auth.user?.role === 'tattooer' && description.trim().length >= 10 && !!file && !busy,
-    [auth.user?.role, description, file, busy],
+    () =>
+      auth.user?.role === 'tattooer' &&
+      description.trim().length >= 10 &&
+      postFiles.length > 0 &&
+      postCategoryIds.length > 0 &&
+      !busy,
+    [auth.user?.role, description, postFiles.length, postCategoryIds.length, busy],
   )
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await listCategories()
+        if (!cancelled) setCategories(res)
+      } catch {
+        // If categories fail to load, registration/post creation UI will be disabled.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 md:px-16">

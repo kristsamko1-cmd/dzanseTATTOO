@@ -81,9 +81,9 @@ export function HomePage() {
       <section className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-5 border border-white/10 overflow-hidden">
           <img
-            src="/images/taterky/janka.jpg"
+            src="/images/fotky-tetovani/janka.png"
             alt="Janka tatérka"
-            className="w-full h-full object-cover min-h-[320px]"
+           className="w-full h-full object-cover grayscale transition-transform duration-300 hover:scale-110"
             loading="lazy"
           />
         </div>
@@ -93,8 +93,11 @@ export function HomePage() {
           </span>
           <h2 className="mt-4 font-[var(--font-display)] text-white text-3xl md:text-5xl">Janka</h2>
           <p className="mt-4 text-white/60 leading-relaxed">
-            Jemné linework, botanické motívy a čisté kompozície. V profile tatérky nájdeš ukážky práce,
-            dostupnosť termínov aj možnosť okamžitej rezervácie.
+            Jemné linework, botanické motívy a čisté kompozície nie sú len štýl — sú podpisom prístupu, kde každá línia má svoj dôvod a každý detail nesie ticho premyslený zámer. V tejto práci nejde o prehnanú expresiu, ale o rovnováhu medzi estetikou a prirodzenosťou tela, ktoré sa stáva plátnom.
+
+V profile tatérky nájdeš ukážky hotových prác, ktoré ukazujú cit pre minimalizmus aj presnosť, dostupnosť termínov prispôsobenú reálnemu kalendáru a možnosť okamžitej rezervácie bez zbytočných krokov. Celý proces je navrhnutý tak, aby bol jednoduchý, transparentný a plynulý — od prvého kontaktu až po finálny návrh tetovania.
+
+Každé tetovanie tu vzniká ako osobný dialóg medzi klientom a umením, kde sa myšlienka mení na trvalý vizuálny príbeh.
           </p>
           <div className="mt-8">
             <Link

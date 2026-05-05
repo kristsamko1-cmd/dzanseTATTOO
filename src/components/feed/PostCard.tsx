@@ -1,4 +1,5 @@
 import { format } from 'date-fns'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Artist, Post } from '../../types/domain'
 
@@ -11,6 +12,15 @@ type Props = {
 }
 
 export function PostCard({ post, artist, liked, onToggleLike, onOpenComments }: Props) {
+  const images = useMemo(() => {
+    const gallery = post.galleryImageUrls?.filter(Boolean) ?? []
+    if (gallery.length > 0) return gallery
+    return [post.imageUrl]
+  }, [post.galleryImageUrls, post.imageUrl])
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const activeImage = images[Math.min(activeImageIndex, images.length - 1)]
+
   return (
     <article className="group">
       <div className="flex items-center gap-4 mb-8">
@@ -34,12 +44,41 @@ export function PostCard({ post, artist, liked, onToggleLike, onOpenComments }: 
         <img
           alt=""
           className="w-full aspect-[16/9] object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105"
-          src={post.imageUrl}
+          src={activeImage}
           loading="lazy"
         />
       </div>
 
+      {images.length > 1 ? (
+        <div className="flex gap-2 mb-8">
+          {images.slice(0, 5).map((url, idx) => (
+            <button
+              key={url + idx}
+              type="button"
+              onClick={() => setActiveImageIndex(idx)}
+              className="w-16 h-12 overflow-hidden border border-white/10 hover:border-[#d6a4a4] transition-colors"
+              aria-label={`Gallery image ${idx + 1}`}
+            >
+              <img src={url} alt="" className="w-full h-full object-cover grayscale" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="max-w-2xl">
+        {post.categoryNames.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {post.categoryNames.slice(0, 4).map((c) => (
+              <span
+                key={c}
+                className="border border-white/10 text-white/50 px-3 py-1 text-[10px] font-[var(--font-serif)] uppercase tracking-widest"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <p className="font-[var(--font-sans)] text-white/70 mb-8 leading-relaxed">{post.description}</p>
 
         <div className="flex items-center justify-between py-6 border-t border-white/10">

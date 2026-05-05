@@ -9,7 +9,14 @@ type FeedContextValue = {
   refresh: () => Promise<void>
   toggleLike: (postId: ID) => Promise<void>
   addComment: (postId: ID, message: string) => Promise<void>
-  createPost: (input: { description: string; imageUrl: string }) => Promise<void>
+  createPost: (input: {
+    description: string
+    galleryImageUrls: string[]
+    title?: string
+    location?: string
+    style?: string
+    categoryIds: ID[]
+  }) => Promise<void>
   getPostDetails: (postId: ID) => Promise<{
     post: Post
     liked: boolean

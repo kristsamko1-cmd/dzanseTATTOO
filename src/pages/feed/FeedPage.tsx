@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useArtists } from '../../state/artists'
 import { useFeed } from '../../state/feed'
 import { PostCard } from '../../components/feed/PostCard'
 import type { ID } from '../../types/domain'
+import type { Category } from '../../types/domain'
+import { listCategories } from '../../services/feedService'
 import { CommentDrawer } from './components/CommentDrawer'
 
 export function FeedPage() {
@@ -12,7 +14,41 @@ export function FeedPage() {
   const [openPostId, setOpenPostId] = useState<ID | null>(null)
 
   const posts = feed.posts
-  const sidebarTrending = useMemo(() => posts.slice(0, 2), [posts])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<ID | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await listCategories()
+        if (!cancelled) setCategories(res)
+      } catch {
+        // UI ostane funkčné aj keď kategórie nie sú načítané.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filteredPosts = useMemo(() => {
+    if (!selectedCategoryId) return posts
+    return posts.filter((p) => p.categoryIds.includes(selectedCategoryId))
+  }, [posts, selectedCategoryId])
+
+  const countsByCategoryId = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of posts) {
+      for (const cid of p.categoryIds) {
+        counts.set(cid, (counts.get(cid) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [posts])
+
+  const sidebarTrending = useMemo(() => filteredPosts.slice(0, 2), [filteredPosts])
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 md:px-16">
@@ -44,7 +80,7 @@ export function FeedPage() {
               <p className="text-white/40">Načítavam feed…</p>
             </div>
           ) : (
-            posts.map((p) => {
+            filteredPosts.map((p) => {
               const artist = getArtist(p.artistId)
               if (!artist) return null
 
@@ -73,19 +109,27 @@ export function FeedPage() {
               Kategórie
             </h3>
             <ul className="flex flex-col gap-4">
-              {[
-                ['Proces Tvorby', 12],
-                ['Umelecká Vízia', 8],
-                ['Starostlivosť', 5],
-                ['Rozhovory', 3],
-              ].map(([label, count]) => (
-                <li key={String(label)}>
-                  <span
-                    className="font-[var(--font-sans)] text-white/60 hover:text-[#d6a4a4] transition-colors flex justify-between"
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryId(null)}
+                  className="w-full text-left font-[var(--font-sans)] text-white/60 hover:text-[#d6a4a4] transition-colors flex justify-between"
+                >
+                  <span>Všetko</span>
+                  <span className="text-xs opacity-50">{posts.length}</span>
+                </button>
+              </li>
+              {categories.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategoryId(c.id)}
+                    aria-pressed={selectedCategoryId === c.id}
+                    className="w-full text-left font-[var(--font-sans)] text-white/60 hover:text-[#d6a4a4] transition-colors flex justify-between"
                   >
-                    <span>{label}</span>
-                    <span className="text-xs opacity-50">{count}</span>
-                  </span>
+                    <span>{c.name}</span>
+                    <span className="text-xs opacity-50">{countsByCategoryId.get(c.id) ?? 0}</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -128,7 +172,7 @@ export function FeedPage() {
                   <img
                     alt=""
                     className="w-20 h-20 object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10"
-                    src={p.imageUrl}
+                    src={p.galleryImageUrls[0] ?? p.imageUrl}
                     loading="lazy"
                   />
                   <div className="flex-1">

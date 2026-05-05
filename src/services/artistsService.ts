@@ -8,6 +8,7 @@ type ArtistRow = {
   avatar_url: string | null
   bio: string
   specialties: string[]   // ❗ nie null
+  instagram_url: string | null
   gallery_image_urls: string[]
 }
 function mapArtist(row: ArtistRow): Artist {
@@ -18,14 +19,15 @@ function mapArtist(row: ArtistRow): Artist {
     avatarUrl: row.avatar_url ?? '/images/fotky-tetovani/1.jpg',
     bio: row.bio,
     specialties: row.specialties ?? [],
+    instagramUrl: row.instagram_url ?? null,
     galleryImageUrls: row.gallery_image_urls ?? [],
   }
 }
 
 export async function listArtists() {
   const { data, error } = await supabase
-    .from('artists')
-    .select('id,user_id,name,avatar_url,bio,specialties,gallery_image_urls')
+    .from('artists_profile_v')
+    .select('id,user_id,name,avatar_url,bio,specialties,instagram_url,gallery_image_urls')
     .order('name', { ascending: true })
 
   if (error) throw error
@@ -34,11 +36,56 @@ export async function listArtists() {
 
 export async function getArtist(artistId: ID) {
   const { data, error } = await supabase
-    .from('artists')
-    .select('id,user_id,name,avatar_url,bio,specialties,gallery_image_urls')
+    .from('artists_profile_v')
+    .select('id,user_id,name,avatar_url,bio,specialties,instagram_url,gallery_image_urls')
     .eq('id', artistId)
     .maybeSingle()
 
   if (error) throw error
   return data ? mapArtist(data) : null
+}
+
+export async function upsertArtistProfile(input: {
+  name: string
+  bio: string
+  avatarUrl: string
+  instagramUrl: string
+  specialtyCategoryIds: ID[]
+}) {
+  const { data: userData, error: userErr } = await supabase.auth.getUser()
+  if (userErr) throw userErr
+  const user = userData.user
+  if (!user) throw new Error('Nie ste prihlásený.')
+
+  // Upsert base artist row; specialties are stored in artists_specialties join table.
+  const { data: artistRow, error: upsertErr } = await supabase
+    .from('artists')
+    .upsert(
+      {
+        user_id: user.id,
+        name: input.name.trim(),
+        bio: input.bio.trim(),
+        avatar_url: input.avatarUrl,
+        instagram_url: input.instagramUrl,
+      },
+      { onConflict: 'user_id' },
+    )
+    .select('id')
+    .single()
+
+  if (upsertErr) throw upsertErr
+  const artistId = artistRow.id as ID
+
+  // Replace specialties set.
+  const { error: delErr } = await supabase.from('artists_specialties').delete().eq('artist_id', artistId)
+  if (delErr) throw delErr
+
+  if (input.specialtyCategoryIds.length > 0) {
+    const rows = input.specialtyCategoryIds.map((category_id) => ({
+      artist_id: artistId,
+      category_id,
+    }))
+    const { error: insErr } = await supabase.from('artists_specialties').insert(rows)
+    if (insErr) throw insErr
+  }
 }

@@ -57,7 +57,21 @@ export function ArtistProfilePage() {
               ))}
             </div>
 
-            <div className="mt-10 flex gap-4">
+            <div className="mt-6">
+              {artist.instagramUrl ? (
+                <a
+                  href={artist.instagramUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 border border-white/10 px-8 py-3 font-[var(--font-serif)] uppercase tracking-widest text-sm text-white/70 hover:text-[#d6a4a4] hover:border-[#d6a4a4] transition-colors"
+                >
+                  <span className="material-symbols-outlined">public</span>
+                  Instagram
+                </a>
+              ) : null}
+            </div>
+
+            <div className="mt-6 flex gap-4">
               <button
                 type="button"
                 onClick={() => navigate('/rezervacia', { state: { artistId: artist.id } })}
