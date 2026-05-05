@@ -17,6 +17,7 @@ export function TattooerPortalPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [instagramUrl, setInstagramUrl] = useState('https://www.instagram.com/dzanes_tattoo/')
   const [categories, setCategories] = useState<Category[]>([])
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [specialtyCategoryIds, setSpecialtyCategoryIds] = useState<ID[]>([])
 
   const [description, setDescription] = useState('')
@@ -35,11 +36,11 @@ export function TattooerPortalPage() {
       name.trim().length >= 2 &&
       bio.trim().length >= 10 &&
       avatarFile !== null &&
-      specialtyCategoryIds.length > 0 &&
+      (categories.length === 0 || specialtyCategoryIds.length > 0) &&
       instagramUrl.trim().length > 5 &&
       !busy
     )
-  }, [email, password, name, bio, avatarFile, specialtyCategoryIds.length, instagramUrl, busy])
+  }, [email, password, name, bio, avatarFile, specialtyCategoryIds.length, instagramUrl, categories.length, busy])
 
   const canLogin = useMemo(() => email.includes('@') && password.length >= 6 && !busy, [email, password, busy])
   const canCreatePost = useMemo(
@@ -47,9 +48,9 @@ export function TattooerPortalPage() {
       auth.user?.role === 'tattooer' &&
       description.trim().length >= 10 &&
       postFiles.length > 0 &&
-      postCategoryIds.length > 0 &&
+      (categories.length === 0 || postCategoryIds.length > 0) &&
       !busy,
-    [auth.user?.role, description, postFiles.length, postCategoryIds.length, busy],
+    [auth.user?.role, description, postFiles.length, postCategoryIds.length, categories.length, busy],
   )
 
   useEffect(() => {
@@ -60,6 +61,8 @@ export function TattooerPortalPage() {
         if (!cancelled) setCategories(res)
       } catch {
         // If categories fail to load, registration/post creation UI will be disabled.
+      } finally {
+        if (!cancelled) setCategoriesLoaded(true)
       }
     })()
     return () => {
@@ -142,8 +145,13 @@ export function TattooerPortalPage() {
             />
 
             <div className="flex flex-col gap-2">
-              {categories.length === 0 ? (
+              {!categoriesLoaded ? (
                 <p className="text-white/40 text-sm">Načítavam kategórie…</p>
+              ) : null}
+              {categoriesLoaded && categories.length === 0 ? (
+                <p className="text-[#d6a4a4] text-sm">
+                  Kategórie zatiaľ nie sú v DB. Registráciu môžeš odoslať aj bez nich.
+                </p>
               ) : null}
               {categories.map((c) => (
                 <label key={c.id} className="flex items-center gap-2 text-white/70">
@@ -320,8 +328,13 @@ export function TattooerPortalPage() {
           />
 
           <div className="flex flex-col gap-2">
-            {categories.length === 0 ? (
+            {!categoriesLoaded ? (
               <p className="text-white/40 text-sm">Načítavam kategórie…</p>
+            ) : null}
+            {categoriesLoaded && categories.length === 0 ? (
+              <p className="text-[#d6a4a4] text-sm">
+                Kategórie zatiaľ nie sú v DB. Post môžeš publikovať aj bez nich.
+              </p>
             ) : null}
             {categories.map((c) => (
               <label key={c.id} className="flex items-center gap-2 text-white/70">
