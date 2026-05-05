@@ -91,15 +91,23 @@ export function TattooerPortalPage() {
                 await auth.signUpTattooer({
                   email: email.trim(),
                   password,
-                  name: name.trim(),
-                  bio: bio.trim(),
-                  specialties: specialties
-                    .split(',')
-                    .map((item) => item.trim())
-                    .filter(Boolean),
+                  name,
+                  bio,
                 })
+
+                if (!avatarFile) throw new Error('Nahraj avatara.')
+                const avatarUrl = await uploadArtistAvatar(avatarFile)
+
+                await upsertArtistProfile({
+                  name,
+                  bio,
+                  avatarUrl,
+                  instagramUrl: instagramUrl.trim(),
+                  specialtyCategoryIds: specialtyCategoryIds,
+                })
+
                 await auth.refresh()
-                setStatus('Účet tatéra je vytvorený. Ak máš zapnuté email potvrdenie, potvrď email.')
+                setStatus('Profil tatéra je vytvorený. Teraz si môžeš pridávať posty.')
               } catch (error) {
                 setStatus(error instanceof Error ? error.message : 'Registrácia zlyhala.')
               } finally {
@@ -120,11 +128,39 @@ export function TattooerPortalPage() {
               onChange={(e) => setBio(e.target.value)}
             />
             <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
               className="bg-black/40 border border-white/10 px-4 py-3 text-white"
-              placeholder="Špecializácie (oddel čiarkou)"
-              value={specialties}
-              onChange={(e) => setSpecialties(e.target.value)}
             />
+
+            <input
+              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+              placeholder="Instagram URL"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+            />
+
+            <div className="flex flex-col gap-2">
+              {categories.length === 0 ? (
+                <p className="text-white/40 text-sm">Načítavam kategórie…</p>
+              ) : null}
+              {categories.map((c) => (
+                <label key={c.id} className="flex items-center gap-2 text-white/70">
+                  <input
+                    type="checkbox"
+                    checked={specialtyCategoryIds.includes(c.id)}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setSpecialtyCategoryIds((prev) =>
+                        checked ? [...prev, c.id] : prev.filter((id) => id !== c.id),
+                      )
+                    }}
+                  />
+                  <span className="text-sm">{c.name}</span>
+                </label>
+              ))}
+            </div>
             <input
               className="bg-black/40 border border-white/10 px-4 py-3 text-white"
               placeholder="Email"
@@ -220,14 +256,25 @@ export function TattooerPortalPage() {
           className="mt-6 flex flex-col gap-4"
           onSubmit={async (e) => {
             e.preventDefault()
-            if (!canCreatePost || !file) return
+            if (!canCreatePost) return
             setBusy(true)
             setStatus(null)
             try {
-              const imageUrl = await uploadPostImage(file)
-              await feed.createPost({ description: description.trim(), imageUrl })
+              const galleryImageUrls = await uploadPostImages(postFiles)
+              await feed.createPost({
+                description: description.trim(),
+                galleryImageUrls,
+                title: title.trim() ? title.trim() : undefined,
+                location: location.trim() ? location.trim() : undefined,
+                style: style.trim() ? style.trim() : undefined,
+                categoryIds: postCategoryIds,
+              })
               setDescription('')
-              setFile(null)
+              setPostFiles([])
+              setTitle('')
+              setLocation('')
+              setStyle('')
+              setPostCategoryIds([])
               setStatus('Post bol uložený.')
             } catch (error) {
               setStatus(error instanceof Error ? error.message : 'Nepodarilo sa vytvoriť post.')
@@ -236,18 +283,62 @@ export function TattooerPortalPage() {
             }
           }}
         >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+              placeholder="Názov postu (voliteľné)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <input
+              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+              placeholder="Lokalita (voliteľné)"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+            <input
+              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+              placeholder="Štýl (voliteľné)"
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+            />
+          </div>
+
           <textarea
             className="bg-black/40 border border-white/10 px-4 py-3 text-white min-h-28"
             placeholder="Popis postu"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            multiple
+            onChange={(e) => setPostFiles(Array.from(e.target.files ?? []))}
             className="bg-black/40 border border-white/10 px-4 py-3 text-white"
           />
+
+          <div className="flex flex-col gap-2">
+            {categories.length === 0 ? (
+              <p className="text-white/40 text-sm">Načítavam kategórie…</p>
+            ) : null}
+            {categories.map((c) => (
+              <label key={c.id} className="flex items-center gap-2 text-white/70">
+                <input
+                  type="checkbox"
+                  checked={postCategoryIds.includes(c.id)}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    setPostCategoryIds((prev) =>
+                      checked ? [...prev, c.id] : prev.filter((id) => id !== c.id),
+                    )
+                  }}
+                />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+          </div>
           <button
             type="submit"
             disabled={!canCreatePost}

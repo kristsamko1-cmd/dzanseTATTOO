@@ -53,11 +53,19 @@ export async function signOut(): Promise<void> {
 export async function signUpTattooer(input: {
   email: string
   password: string
+  name: string
+  bio: string
 }): Promise<AuthUser | null> {
 
   const { data, error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
+    options: {
+      data: {
+        artist_name: input.name.trim(),
+        bio: input.bio.trim(),
+      },
+    },
   })
 
   if (error) throw error

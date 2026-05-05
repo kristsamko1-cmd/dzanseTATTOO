@@ -9,6 +9,8 @@ type AuthContextValue = {
   signUpTattooer: (input: {
     email: string
     password: string
+    name: string
+    bio: string
   }) => Promise<void>
   signOut: () => Promise<void>
   refresh: () => Promise<void>
@@ -55,6 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUpTattooer = useCallback(async (input: {
     email: string
     password: string
+    name: string
+    bio: string
   }) => {
     await authService.signUpTattooer(input)
 

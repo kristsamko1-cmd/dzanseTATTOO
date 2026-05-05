@@ -30,5 +30,6 @@ export async function uploadPostImages(files: File[]) {
 
 export async function uploadArtistAvatar(file: File) {
   // Reuse existing bucket to avoid extra storage setup.
-  return uploadToPublicBucket('post-images', 'avatars', file)
+  // Store under `posts/...` prefix to match existing upload policies.
+  return uploadToPublicBucket('post-images', 'posts/avatars', file)
 }

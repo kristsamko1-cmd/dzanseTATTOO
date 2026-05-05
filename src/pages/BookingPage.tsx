@@ -22,6 +22,7 @@ export function BookingPage() {
   const [slots, setSlots] = useState<Array<{ startsAtIso: string; available: boolean }>>([])
   const [selectedSlotIso, setSelectedSlotIso] = useState<string | null>(null)
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const [clientName, setClientName] = useState('')
   const [clientEmail, setClientEmail] = useState('')
@@ -170,6 +171,7 @@ export function BookingPage() {
                 e.preventDefault()
                 if (!canSubmit || !selectedSlotIso || !artistId) return
                 setSubmitting(true)
+                  setSubmitError(null)
                 try {
                   await createBooking({
                     artistId,
@@ -178,6 +180,8 @@ export function BookingPage() {
                     note: note.trim() ? note.trim() : undefined,
                     startsAtIso: selectedSlotIso,
                   })
+                  } catch (error) {
+                    setSubmitError(error instanceof Error ? error.message : 'Nepodarilo sa odoslať rezerváciu.')
                 } finally {
                   setSubmitting(false)
                 }
@@ -238,6 +242,8 @@ export function BookingPage() {
                   </p>
                 </div>
               ) : null}
+
+              {submitError ? <p className="text-[#d6a4a4] text-sm">{submitError}</p> : null}
             </form>
           </div>
         </div>
