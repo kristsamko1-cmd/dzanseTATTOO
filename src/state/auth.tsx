@@ -60,10 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string
     bio: string
   }) => {
-    await authService.signUpTattooer(input)
+ await authService.signUpTattooer(input)
 
-    // ⚠️ user ešte nemusí byť prihlásený (email verify)
-    await refresh()
+// 👇 user NEBUDE hneď prihlásený
+setUser(null)
   }, [refresh])
 
   const signOut = useCallback(async () => {

@@ -81,7 +81,7 @@ export function HomePage() {
       <section className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-5 border border-white/10 overflow-hidden">
           <img
-            src="/images/fotky-tetovani/janka.png"
+            src="/images/fotky-tetovani/janka.webp"
             alt="Janka tatérka"
            className="w-full h-full object-cover grayscale transition-transform duration-300 hover:scale-110"
             loading="lazy"

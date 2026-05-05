@@ -55,9 +55,9 @@ export async function signUpTattooer(input: {
   password: string
   name: string
   bio: string
-}): Promise<AuthUser | null> {
+}): Promise<void> {
 
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
     options: {
@@ -70,11 +70,8 @@ export async function signUpTattooer(input: {
 
   if (error) throw error
 
-  // ⚠️ ak máš email confirmation zapnutý:
-  // session bude null → to je OK
-  if (!data.session) return null
-
-  return resolveAuthUser(data.session)
+  // ❗ NEVRACAJ USER
+  // user ešte nemusí existovať (email confirm)
 }
 
 export function onAuthStateChanged(callback: () => void) {
