@@ -4,13 +4,13 @@ import clsx from 'clsx'
 type Filter = 'Všetko' | 'Linework' | 'Realism' | 'Custom sleeves'
 
 const galleryImages = [
-  '/images/fotky-tetovani/1.PNG',
-  '/images/fotky-tetovani/2.PNG',
-  '/images/fotky-tetovani/3.PNG',
-  '/images/fotky-tetovani/4.PNG',
-  '/images/fotky-tetovani/5.PNG',
-  '/images/fotky-tetovani/6.PNG',
-  '/images/fotky-tetovani/7.PNG',
+  '/public/images/fotky-tetovani/1.png',
+  '/public/images/fotky-tetovani/2.PNG',
+  '/public/images/fotky-tetovani/3.PNG',
+  '/public/images/fotky-tetovani/4.PNG',
+  '/public/images/fotky-tetovani/5.PNG',
+  '/public/images/fotky-tetovani/6.PNG',
+  '/public/images/fotky-tetovani/7.PNG',
 ]
 
 export function GalleryPage() {
