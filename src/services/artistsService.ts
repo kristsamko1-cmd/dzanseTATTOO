@@ -7,10 +7,9 @@ type ArtistRow = {
   name: string
   avatar_url: string | null
   bio: string
-  specialties: string[] | null
-  gallery_image_urls: string[] | null
+  specialties: string[]   // ❗ nie null
+  gallery_image_urls: string[]
 }
-
 function mapArtist(row: ArtistRow): Artist {
   return {
     id: row.id,

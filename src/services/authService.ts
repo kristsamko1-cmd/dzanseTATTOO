@@ -45,6 +45,11 @@ export async function signOut(): Promise<void> {
   if (error) throw error
 }
 
+/**
+ * 🔥 SIGN UP (Tattooer)
+ * - vytvorí auth usera
+ * - DB trigger automaticky vytvorí artist row
+ */
 export async function signUpTattooer(input: {
   email: string
   password: string
@@ -52,6 +57,7 @@ export async function signUpTattooer(input: {
   bio: string
   specialties: string[]
 }): Promise<AuthUser | null> {
+
   const { data, error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
@@ -65,6 +71,8 @@ export async function signUpTattooer(input: {
 
   if (error) throw error
 
+  // ⚠️ ak máš email confirmation zapnutý:
+  // session bude null → to je OK
   if (!data.session) return null
 
   return resolveAuthUser(data.session)

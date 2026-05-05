@@ -62,9 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     bio: string
     specialties: string[]
   }) => {
-    const next = await authService.signUpTattooer(input)
-    setUser(next)
-  }, [])
+    await authService.signUpTattooer(input)
+
+    // ⚠️ user ešte nemusí byť prihlásený (email verify)
+    await refresh()
+  }, [refresh])
 
   const signOut = useCallback(async () => {
     await authService.signOut()
