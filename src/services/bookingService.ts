@@ -61,9 +61,21 @@ export async function listAvailability(artistId: ID, dayIso: string) {
     .eq('artist_id', artistId)
     .gte('starts_at', setMinutes(setHours(day, 0), 0).toISOString())
     .lt('starts_at', setMinutes(setHours(day, 23), 59).toISOString())
-  if (error) throw error
+  let takenRows = data
+  if (error) {
+    // Fallback for DBs where booking_slots table was not created yet.
+    if (error.code !== '42P01') throw error
+    const fallback = await supabase
+      .from('bookings')
+      .select('starts_at')
+      .eq('artist_id', artistId)
+      .gte('starts_at', setMinutes(setHours(day, 0), 0).toISOString())
+      .lt('starts_at', setMinutes(setHours(day, 23), 59).toISOString())
+    if (fallback.error) throw fallback.error
+    takenRows = fallback.data
+  }
 
-  const taken = (data ?? [])
+  const taken = (takenRows ?? [])
     .map((b) => b.starts_at)
     .filter((iso) => isSameDay(parseISO(iso), day))
 

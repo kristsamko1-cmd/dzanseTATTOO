@@ -30,8 +30,15 @@ export async function listArtists() {
     .select('id,user_id,name,avatar_url,bio,specialties,instagram_url,gallery_image_urls')
     .order('name', { ascending: true })
 
-  if (error) throw error
-  return (data ?? []).map(mapArtist)
+  if (!error) return (data ?? []).map(mapArtist)
+  if (error.code !== '42P01') throw error
+
+  const fallback = await supabase
+    .from('artists')
+    .select('id,user_id,name,avatar_url,bio,specialties,instagram_url,gallery_image_urls')
+    .order('name', { ascending: true })
+  if (fallback.error) throw fallback.error
+  return (fallback.data ?? []).map(mapArtist)
 }
 
 export async function getArtist(artistId: ID) {
@@ -41,8 +48,16 @@ export async function getArtist(artistId: ID) {
     .eq('id', artistId)
     .maybeSingle()
 
-  if (error) throw error
-  return data ? mapArtist(data) : null
+  if (!error) return data ? mapArtist(data) : null
+  if (error.code !== '42P01') throw error
+
+  const fallback = await supabase
+    .from('artists')
+    .select('id,user_id,name,avatar_url,bio,specialties,instagram_url,gallery_image_urls')
+    .eq('id', artistId)
+    .maybeSingle()
+  if (fallback.error) throw fallback.error
+  return fallback.data ? mapArtist(fallback.data) : null
 }
 
 export async function upsertArtistProfile(input: {
@@ -76,16 +91,29 @@ export async function upsertArtistProfile(input: {
   if (upsertErr) throw upsertErr
   const artistId = artistRow.id as ID
 
-  // Replace specialties set.
+  // Primary path: normalize via artists_specialties join table.
   const { error: delErr } = await supabase.from('artists_specialties').delete().eq('artist_id', artistId)
-  if (delErr) throw delErr
-
-  if (input.specialtyCategoryIds.length > 0) {
-    const rows = input.specialtyCategoryIds.map((category_id) => ({
-      artist_id: artistId,
-      category_id,
-    }))
-    const { error: insErr } = await supabase.from('artists_specialties').insert(rows)
-    if (insErr) throw insErr
+  if (!delErr) {
+    if (input.specialtyCategoryIds.length > 0) {
+      const rows = input.specialtyCategoryIds.map((category_id) => ({
+        artist_id: artistId,
+        category_id,
+      }))
+      const { error: insErr } = await supabase.from('artists_specialties').insert(rows)
+      if (insErr) throw insErr
+    }
+    return
   }
+
+  // Fallback path for current DB: write legacy artists.specialties text[] directly.
+  if (delErr.code !== '42P01') throw delErr
+  const { data: catRows, error: catErr } = await supabase
+    .from('categories')
+    .select('id,name')
+    .in('id', input.specialtyCategoryIds)
+  if (catErr) throw catErr
+
+  const specialtyNames = (catRows ?? []).map((c) => c.name)
+  const { error: legacyErr } = await supabase.from('artists').update({ specialties: specialtyNames }).eq('id', artistId)
+  if (legacyErr) throw legacyErr
 }

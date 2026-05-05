@@ -17,6 +17,17 @@ type FeedRow = {
   category_names: string[]
 }
 
+type LegacyFeedRow = {
+  id: string
+  artist_id: string
+  image_url: string
+  gallery_image_urls: string[] | null
+  description: string
+  created_at: string
+  likes: Array<{ id: string }>
+  comments: Array<{ id: string }>
+}
+
 function mapPost(row: FeedRow): Post {
   return {
     id: row.id,
@@ -32,6 +43,24 @@ function mapPost(row: FeedRow): Post {
     commentCount: row.comment_count ?? 0,
     categoryIds: row.category_ids ?? [],
     categoryNames: row.category_names ?? [],
+  }
+}
+
+function mapLegacyPost(row: LegacyFeedRow): Post {
+  return {
+    id: row.id,
+    artistId: row.artist_id,
+    imageUrl: row.image_url,
+    galleryImageUrls: row.gallery_image_urls ?? [row.image_url],
+    title: null,
+    location: null,
+    style: null,
+    description: row.description,
+    createdAtIso: row.created_at,
+    likeCount: row.likes.length,
+    commentCount: row.comments.length,
+    categoryIds: [],
+    categoryNames: [],
   }
 }
 
@@ -55,8 +84,15 @@ export async function listPosts() {
     )
     .order('created_at', { ascending: false })
 
-  if (error) throw error
-  return (data ?? []).map((row) => mapPost(row as FeedRow))
+  if (!error) return (data ?? []).map((row) => mapPost(row as FeedRow))
+  if (!['42P01', '42703'].includes(error.code ?? '')) throw error
+
+  const legacy = await supabase
+    .from('posts')
+    .select('id,artist_id,image_url,gallery_image_urls,description,created_at,likes:post_likes(id),comments:post_comments(id)')
+    .order('created_at', { ascending: false })
+  if (legacy.error) throw legacy.error
+  return (legacy.data ?? []).map((row) => mapLegacyPost(row as LegacyFeedRow))
 }
 
 export async function listFeedItems() {
@@ -76,8 +112,22 @@ export async function getPost(postId: ID) {
     )
     .eq('id', postId)
     .maybeSingle()
-  if (postError) throw postError
-  if (!postRow) throw new Error('Post not found')
+  let mappedPost: Post | null = null
+  if (!postError) {
+    if (!postRow) throw new Error('Post not found')
+    mappedPost = mapPost(postRow as FeedRow)
+  } else if (['42P01', '42703'].includes(postError.code ?? '')) {
+    const legacyPost = await supabase
+      .from('posts')
+      .select('id,artist_id,image_url,gallery_image_urls,description,created_at,likes:post_likes(id),comments:post_comments(id)')
+      .eq('id', postId)
+      .maybeSingle()
+    if (legacyPost.error) throw legacyPost.error
+    if (!legacyPost.data) throw new Error('Post not found')
+    mappedPost = mapLegacyPost(legacyPost.data as LegacyFeedRow)
+  } else {
+    throw postError
+  }
 
   const userId = await getCurrentUserId()
   const likedIds = await fetchLikeIdsByUser(userId)
@@ -96,7 +146,7 @@ export async function getPost(postId: ID) {
     createdAtIso: row.created_at,
   }))
   return {
-    post: mapPost(postRow as FeedRow),
+    post: mappedPost,
     liked: likedIds.has(postId),
     comments,
   }
@@ -180,21 +230,41 @@ export async function createPost(input: {
   const firstImage = input.galleryImageUrls[0]
   if (!firstImage) throw new Error('Post musí mať aspoň 1 fotku.')
 
-  const { data: inserted, error: postError } = await supabase
-    .from('posts')
-    .insert({
-      artist_id: artist.id,
-      image_url: firstImage,
-      gallery_image_urls: input.galleryImageUrls,
-      description: input.description.trim(),
-      title: input.title?.trim() ? input.title.trim() : null,
-      location: input.location?.trim() ? input.location.trim() : null,
-      style: input.style?.trim() ? input.style.trim() : null,
-    })
-    .select('id')
-    .single()
+  const payload = {
+    artist_id: artist.id,
+    image_url: firstImage,
+    gallery_image_urls: input.galleryImageUrls,
+    description: input.description.trim(),
+    title: input.title?.trim() ? input.title.trim() : null,
+    location: input.location?.trim() ? input.location.trim() : null,
+    style: input.style?.trim() ? input.style.trim() : null,
+  }
+
+  let inserted: { id: ID } | null = null
+  let postError: { code?: string; message?: string } | null = null
+  const createRich = await supabase.from('posts').insert(payload).select('id').single()
+  inserted = createRich.data as { id: ID } | null
+  postError = createRich.error
+
+  if (postError && postError.code === '42703') {
+    // Legacy schema without title/location/style columns.
+    const legacyInsert = await supabase
+      .from('posts')
+      .insert({
+        artist_id: artist.id,
+        image_url: firstImage,
+        gallery_image_urls: input.galleryImageUrls,
+        description: input.description.trim(),
+        tags: [],
+      })
+      .select('id')
+      .single()
+    inserted = legacyInsert.data as { id: ID } | null
+    postError = legacyInsert.error
+  }
 
   if (postError) throw postError
+  if (!inserted) throw new Error('Nepodarilo sa vytvoriť post.')
 
   const postId = inserted.id as ID
   if (input.categoryIds.length > 0) {
@@ -206,18 +276,8 @@ export async function createPost(input: {
     if (pcError) throw pcError
   }
 
-  const { data: full, error: fullError } = await supabase
-    .from('posts_feed_v')
-    .select(
-      'id,artist_id,image_url,gallery_image_urls,title,location,style,description,created_at,like_count,comment_count,category_ids,category_names',
-    )
-    .eq('id', postId)
-    .maybeSingle()
-
-  if (fullError) throw fullError
-  if (!full) throw new Error('Post nebol nájdený po vložení.')
-
-  return mapPost(full as FeedRow)
+  const details = await getPost(postId)
+  return details.post
 }
 
 export async function listCategories(): Promise<Category[]> {
