@@ -64,7 +64,7 @@ export async function listAvailability(artistId: ID, dayIso: string) {
   let takenRows = data
   if (error) {
     // Fallback for DBs where booking_slots table was not created yet.
-    if (!['42P01', '42501'].includes(error.code ?? '')) throw error
+    if (!['42P01', '42501', 'PGRST205', 'PGRST204'].includes(error.code ?? '')) throw error
     const fallback = await supabase
       .from('bookings')
       .select('starts_at')

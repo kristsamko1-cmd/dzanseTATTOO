@@ -6,9 +6,9 @@ type FeedRow = {
   artist_id: string
   image_url: string
   gallery_image_urls: string[]
-  title: string | null
-  location: string | null
-  style: string | null
+  title?: string | null
+  location?: string | null
+  style?: string | null
   description: string
   created_at: string
   like_count: number
@@ -34,9 +34,9 @@ function mapPost(row: FeedRow): Post {
     artistId: row.artist_id,
     imageUrl: row.image_url,
     galleryImageUrls: row.gallery_image_urls ?? [],
-    title: row.title,
-    location: row.location,
-    style: row.style,
+    title: row.title ?? null,
+    location: row.location ?? null,
+    style: row.style ?? null,
     description: row.description,
     createdAtIso: row.created_at,
     likeCount: row.like_count ?? 0,
@@ -44,6 +44,16 @@ function mapPost(row: FeedRow): Post {
     categoryIds: row.category_ids ?? [],
     categoryNames: row.category_names ?? [],
   }
+}
+
+function shouldUseLegacyFallback(error: { code?: string | null; message?: string | null }) {
+  const code = error.code ?? ''
+  const message = (error.message ?? '').toLowerCase()
+  if (['42P01', '42703', 'PGRST204', 'PGRST205'].includes(code)) return true
+  return (
+    message.includes('column') &&
+    (message.includes('title') || message.includes('location') || message.includes('style'))
+  )
 }
 
 function mapLegacyPost(row: LegacyFeedRow): Post {
@@ -80,12 +90,12 @@ export async function listPosts() {
   const { data, error } = await supabase
     .from('posts_feed_v')
     .select(
-      'id,artist_id,image_url,gallery_image_urls,title,location,style,description,created_at,like_count,comment_count,category_ids,category_names',
+      'id,artist_id,image_url,gallery_image_urls,description,created_at,like_count,comment_count,category_ids,category_names',
     )
     .order('created_at', { ascending: false })
 
   if (!error) return (data ?? []).map((row) => mapPost(row as FeedRow))
-  if (!['42P01', '42703'].includes(error.code ?? '')) throw error
+  if (!shouldUseLegacyFallback(error)) throw error
 
   const legacy = await supabase
     .from('posts')
@@ -108,7 +118,7 @@ export async function getPost(postId: ID) {
   const { data: postRow, error: postError } = await supabase
     .from('posts_feed_v')
     .select(
-      'id,artist_id,image_url,gallery_image_urls,title,location,style,description,created_at,like_count,comment_count,category_ids,category_names',
+      'id,artist_id,image_url,gallery_image_urls,description,created_at,like_count,comment_count,category_ids,category_names',
     )
     .eq('id', postId)
     .maybeSingle()
@@ -116,7 +126,7 @@ export async function getPost(postId: ID) {
   if (!postError) {
     if (!postRow) throw new Error('Post not found')
     mappedPost = mapPost(postRow as FeedRow)
-  } else if (['42P01', '42703'].includes(postError.code ?? '')) {
+  } else if (shouldUseLegacyFallback(postError)) {
     const legacyPost = await supabase
       .from('posts')
       .select('id,artist_id,image_url,gallery_image_urls,description,created_at,likes:post_likes(id),comments:post_comments(id)')
@@ -261,7 +271,7 @@ export async function createPost(input: {
   inserted = createRich.data as { id: ID } | null
   postError = createRich.error
 
-  if (postError && postError.code === '42703') {
+  if (postError && shouldUseLegacyFallback(postError)) {
     // Legacy schema without title/location/style columns.
     const legacyInsert = await supabase
       .from('posts')

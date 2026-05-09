@@ -87,21 +87,14 @@ export function TattooerPortalPage() {
         return
       }
 
-      try {
-        const [nextBookings, nextMyPosts] = await Promise.all([
-          booking.listBookingsByArtist(auth.user.artistId),
-          feed.listMyPosts(),
-        ])
-        if (!cancelled) {
-          setArtistBookings(nextBookings)
-          setMyPosts(nextMyPosts)
-        }
-      } catch {
-        if (!cancelled) {
-          setArtistBookings([])
-          setMyPosts([])
-        }
-      }
+      const [bookingsResult, postsResult] = await Promise.allSettled([
+        booking.listBookingsByArtist(auth.user.artistId),
+        feed.listMyPosts(),
+      ])
+      if (cancelled) return
+
+      setArtistBookings(bookingsResult.status === 'fulfilled' ? bookingsResult.value : [])
+      setMyPosts(postsResult.status === 'fulfilled' ? postsResult.value : [])
     })()
 
     return () => {
@@ -122,114 +115,120 @@ export function TattooerPortalPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="border border-white/10 bg-[#0a0a0a] p-6 md:p-8">
           <h2 className="font-[var(--font-display)] text-white text-2xl">Registrácia tatéra</h2>
-          <form
-            className="mt-6 flex flex-col gap-4"
-            onSubmit={async (e) => {
-              e.preventDefault()
-              if (!canRegister) return
-              setBusy(true)
-              setStatus(null)
-              try {
-                await auth.signUpTattooer({
-                  email: email.trim(),
-                  password,
-                  name,
-                  bio,
-                })
+          {auth.user ? (
+            <p className="mt-6 text-white/60">
+              Si prihlásený ({auth.user.email}). Registráciu netreba opakovať.
+            </p>
+          ) : (
+            <form
+              className="mt-6 flex flex-col gap-4"
+              onSubmit={async (e) => {
+                e.preventDefault()
+                if (!canRegister) return
+                setBusy(true)
+                setStatus(null)
+                try {
+                  await auth.signUpTattooer({
+                    email: email.trim(),
+                    password,
+                    name,
+                    bio,
+                  })
 
-                if (!avatarFile) throw new Error('Nahraj avatara.')
-                const avatarUrl = await uploadArtistAvatar(avatarFile)
+                  if (!avatarFile) throw new Error('Nahraj avatara.')
+                  const avatarUrl = await uploadArtistAvatar(avatarFile)
 
-                await upsertArtistProfile({
-                  name,
-                  bio,
-                  avatarUrl,
-                  instagramUrl: instagramUrl.trim(),
-                  specialtyCategoryIds: specialtyCategoryIds,
-                })
+                  await upsertArtistProfile({
+                    name,
+                    bio,
+                    avatarUrl,
+                    instagramUrl: instagramUrl.trim(),
+                    specialtyCategoryIds: specialtyCategoryIds,
+                  })
 
-                await auth.refresh()
-                setStatus('Profil tatéra je vytvorený. Teraz si môžeš pridávať posty.')
-              } catch (error) {
-                setStatus(error instanceof Error ? error.message : 'Registrácia zlyhala.')
-              } finally {
-                setBusy(false)
-              }
-            }}
-          >
-            <input
-              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
-              placeholder="Meno tatéra"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <textarea
-              className="bg-black/40 border border-white/10 px-4 py-3 text-white min-h-28"
-              placeholder="Krátke bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-            />
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
-              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
-            />
-
-            <input
-              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
-              placeholder="Instagram URL"
-              value={instagramUrl}
-              onChange={(e) => setInstagramUrl(e.target.value)}
-            />
-
-            <div className="flex flex-col gap-2">
-              {!categoriesLoaded ? (
-                <p className="text-white/40 text-sm">Načítavam kategórie…</p>
-              ) : null}
-              {categoriesLoaded && categories.length === 0 ? (
-                <p className="text-[#d6a4a4] text-sm">
-                  Kategórie zatiaľ nie sú v DB. Registráciu môžeš odoslať aj bez nich.
-                </p>
-              ) : null}
-              {categories.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-white/70">
-                  <input
-                    type="checkbox"
-                    checked={specialtyCategoryIds.includes(c.id)}
-                    onChange={(e) => {
-                      const checked = e.target.checked
-                      setSpecialtyCategoryIds((prev) =>
-                        checked ? [...prev, c.id] : prev.filter((id) => id !== c.id),
-                      )
-                    }}
-                  />
-                  <span className="text-sm">{c.name}</span>
-                </label>
-              ))}
-            </div>
-            <input
-              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-            />
-            <input
-              className="bg-black/40 border border-white/10 px-4 py-3 text-white"
-              placeholder="Heslo (min 6 znakov)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-            />
-            <button
-              type="submit"
-              disabled={!canRegister}
-              className="bg-[#d6a4a4] text-black px-6 py-3 uppercase tracking-widest text-xs disabled:opacity-40"
+                  await auth.refresh()
+                  setStatus('Profil tatéra je vytvorený. Teraz si môžeš pridávať posty.')
+                } catch (error) {
+                  setStatus(error instanceof Error ? error.message : 'Registrácia zlyhala.')
+                } finally {
+                  setBusy(false)
+                }
+              }}
             >
-              Registrovať sa ako tatér
-            </button>
-          </form>
+              <input
+                className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+                placeholder="Meno tatéra"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <textarea
+                className="bg-black/40 border border-white/10 px-4 py-3 text-white min-h-28"
+                placeholder="Krátke bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+              />
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+              />
+
+              <input
+                className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+                placeholder="Instagram URL"
+                value={instagramUrl}
+                onChange={(e) => setInstagramUrl(e.target.value)}
+              />
+
+              <div className="flex flex-col gap-2">
+                {!categoriesLoaded ? (
+                  <p className="text-white/40 text-sm">Načítavam kategórie…</p>
+                ) : null}
+                {categoriesLoaded && categories.length === 0 ? (
+                  <p className="text-[#d6a4a4] text-sm">
+                    Kategórie zatiaľ nie sú v DB. Registráciu môžeš odoslať aj bez nich.
+                  </p>
+                ) : null}
+                {categories.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-white/70">
+                    <input
+                      type="checkbox"
+                      checked={specialtyCategoryIds.includes(c.id)}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setSpecialtyCategoryIds((prev) =>
+                          checked ? [...prev, c.id] : prev.filter((id) => id !== c.id),
+                        )
+                      }}
+                    />
+                    <span className="text-sm">{c.name}</span>
+                  </label>
+                ))}
+              </div>
+              <input
+                className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+              />
+              <input
+                className="bg-black/40 border border-white/10 px-4 py-3 text-white"
+                placeholder="Heslo (min 6 znakov)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+              />
+              <button
+                type="submit"
+                disabled={!canRegister}
+                className="bg-[#d6a4a4] text-black px-6 py-3 uppercase tracking-widest text-xs disabled:opacity-40"
+              >
+                Registrovať sa ako tatér
+              </button>
+            </form>
+          )}
         </section>
 
         <section className="border border-white/10 bg-[#0a0a0a] p-6 md:p-8">
