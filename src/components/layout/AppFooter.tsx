@@ -14,11 +14,13 @@ export function AppFooter() {
         </div>
 
         <div className="grid grid-cols-2 gap-x-16 md:gap-x-24 gap-y-4 font-[var(--font-serif)] text-sm tracking-widest uppercase">
-          <a className="text-white/40 hover:text-white transition-colors duration-300" href="#">
+          <a
+            className="text-white/40 hover:text-white transition-colors duration-300"
+            href="https://www.instagram.com/dzanes_tattoo/"
+            target="_blank"
+            rel="noreferrer"
+          >
             Instagram
-          </a>
-          <a className="text-white/40 hover:text-white transition-colors duration-300" href="#">
-            Facebook
           </a>
           <Link
             className="text-white/40 hover:text-white transition-colors duration-300"
@@ -26,15 +28,15 @@ export function AppFooter() {
           >
             Rezervácia
           </Link>
-          <a className="text-white/40 hover:text-white transition-colors duration-300" href="#">
+          <Link className="text-white/40 hover:text-white transition-colors duration-300" to="/podmienky">
             Podmienky
-          </a>
+          </Link>
         </div>
       </div>
 
       <div className="max-w-[1440px] mx-auto px-6 md:px-16 pb-10 text-center md:text-left">
         <p className="font-[var(--font-serif)] text-[10px] tracking-[0.3em] text-white/20 uppercase">
-          © {new Date().getFullYear()} DŽANES TATTOO. SACRED CRAFT. ALL RIGHTS RESERVED.
+          © {new Date().getFullYear()} DŽANES TATTOO. MADE BY KRIST SAMUEL.
         </p>
       </div>
     </footer>

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
 import { useArtists } from '../../state/artists'
 import { useFeed } from '../../state/feed'
@@ -66,12 +65,6 @@ export function FeedPage() {
             Nahliadnite pod povrch našej práce. Od prvých skíc až po finálne zahojenie — zdieľame
             proces tvorby umenia, ktoré zostáva navždy.
           </p>
-          <Link
-            to="/tater"
-            className="inline-block mt-6 border border-white/10 px-6 py-3 text-[10px] font-[var(--font-serif)] uppercase tracking-[0.25em] text-white/70 hover:text-[#d6a4a4] hover:border-[#d6a4a4] transition-colors"
-          >
-            Prihlásenie tatéra a nový post
-          </Link>
         </div>
       </section>
 

@@ -5,6 +5,7 @@ import { AppHeader } from './components/layout/AppHeader'
 import { BookingPage } from './pages/BookingPage'
 import { GalleryPage } from './pages/GalleryPage'
 import { HomePage } from './pages/HomePage'
+import { TermsPage } from './pages/TermsPage'
 import { ArtistProfilePage } from './pages/artists/ArtistProfilePage'
 import { ArtistsPage } from './pages/artists/ArtistsPage'
 import { FeedPage } from './pages/feed/FeedPage'
@@ -31,6 +32,7 @@ function AnimatedRoutes() {
           <Route path="/taters" element={<ArtistsPage />} />
           <Route path="/artist/:id" element={<ArtistProfilePage />} />
           <Route path="/rezervacia" element={<BookingPage />} />
+          <Route path="/podmienky" element={<TermsPage />} />
           <Route path="/tater" element={<TattooerPortalPage />} />
         </Routes>
       </motion.div>

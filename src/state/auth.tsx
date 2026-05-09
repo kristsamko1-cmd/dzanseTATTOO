@@ -11,7 +11,7 @@ type AuthContextValue = {
     password: string
     name: string
     bio: string
-  }) => Promise<void>
+  }) => Promise<{ hasSession: boolean }>
   signOut: () => Promise<void>
   refresh: () => Promise<void>
 }
@@ -60,10 +60,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string
     bio: string
   }) => {
- await authService.signUpTattooer(input)
-
-// 👇 user NEBUDE hneď prihlásený
-setUser(null)
+    const result = await authService.signUpTattooer(input)
+    if (result.hasSession) {
+      await refresh()
+    } else {
+      setUser(null)
+    }
+    return result
   }, [refresh])
 
   const signOut = useCallback(async () => {

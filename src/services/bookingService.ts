@@ -10,6 +10,8 @@ type CreateBookingInput = {
   startsAtIso: string
 }
 
+let bookingSlotsMissing = false
+
 function mapBooking(row: {
   id: string
   artist_id: string
@@ -55,33 +57,48 @@ export function buildDailySlots(dayIso: string) {
 export async function listAvailability(artistId: ID, dayIso: string) {
   const day = parseISO(dayIso)
   const slots = buildDailySlots(dayIso)
-  const { data, error } = await supabase
-    .from('booking_slots')
-    .select('starts_at')
-    .eq('artist_id', artistId)
-    .gte('starts_at', setMinutes(setHours(day, 0), 0).toISOString())
-    .lt('starts_at', setMinutes(setHours(day, 23), 59).toISOString())
-  let takenRows = data
-  if (error) {
-    // Fallback for DBs where booking_slots table was not created yet.
-    if (!['42P01', '42501', 'PGRST205', 'PGRST204'].includes(error.code ?? '')) throw error
+  const fromIso = setMinutes(setHours(day, 0), 0).toISOString()
+  const toIso = setMinutes(setHours(day, 23), 59).toISOString()
+
+  let takenRows: Array<{ starts_at: string }> | null = null
+  if (!bookingSlotsMissing) {
+    const { data, error } = await supabase
+      .from('booking_slots')
+      .select('starts_at')
+      .eq('artist_id', artistId)
+      .gte('starts_at', fromIso)
+      .lt('starts_at', toIso)
+
+    if (!error) {
+      takenRows = data
+    } else {
+      // Fallback for DBs where booking_slots table was not created yet.
+      if (!['42P01', '42501', 'PGRST205', 'PGRST204'].includes(error.code ?? '')) throw error
+      bookingSlotsMissing = true
+    }
+  }
+
+  if (!takenRows) {
     const fallback = await supabase
       .from('bookings')
       .select('starts_at')
       .eq('artist_id', artistId)
-      .gte('starts_at', setMinutes(setHours(day, 0), 0).toISOString())
-      .lt('starts_at', setMinutes(setHours(day, 23), 59).toISOString())
+      .gte('starts_at', fromIso)
+      .lt('starts_at', toIso)
     if (fallback.error && !['42P01', '42501'].includes(fallback.error.code ?? '')) throw fallback.error
     takenRows = fallback.data
   }
 
-  const taken = (takenRows ?? [])
+  const takenTimestamps = new Set(
+    (takenRows ?? [])
     .map((b) => b.starts_at)
     .filter((iso) => isSameDay(parseISO(iso), day))
+      .map((iso) => new Date(iso).getTime()),
+  )
 
   return slots.map((iso) => ({
     startsAtIso: iso,
-    available: !taken.includes(iso),
+    available: !takenTimestamps.has(new Date(iso).getTime()),
   }))
 }
 

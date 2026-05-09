@@ -106,7 +106,7 @@ export async function upsertArtistProfile(input: {
   }
 
   // Fallback path for current DB: write legacy artists.specialties text[] directly.
-  if (delErr.code !== '42P01') throw delErr
+  if (!['42P01', 'PGRST205', 'PGRST204'].includes(delErr.code ?? '')) throw delErr
   const { data: catRows, error: catErr } = await supabase
     .from('categories')
     .select('id,name')

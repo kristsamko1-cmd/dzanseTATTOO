@@ -128,12 +128,17 @@ export function TattooerPortalPage() {
                 setBusy(true)
                 setStatus(null)
                 try {
-                  await auth.signUpTattooer({
+                const result = await auth.signUpTattooer({
                     email: email.trim(),
                     password,
                     name,
                     bio,
                   })
+
+                if (!result.hasSession) {
+                  setStatus('Účet bol vytvorený. Potvrď email a potom sa prihlás.')
+                  return
+                }
 
                   if (!avatarFile) throw new Error('Nahraj avatara.')
                   const avatarUrl = await uploadArtistAvatar(avatarFile)
@@ -146,7 +151,6 @@ export function TattooerPortalPage() {
                     specialtyCategoryIds: specialtyCategoryIds,
                   })
 
-                  await auth.refresh()
                   setStatus('Profil tatéra je vytvorený. Teraz si môžeš pridávať posty.')
                 } catch (error) {
                   setStatus(error instanceof Error ? error.message : 'Registrácia zlyhala.')
