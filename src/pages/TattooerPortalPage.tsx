@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../state/auth'
+import { useBooking } from '../state/booking'
 import { useFeed } from '../state/feed'
 import { uploadArtistAvatar, uploadPostImages } from '../services/storageService'
 import { upsertArtistProfile } from '../services/artistsService'
 import { listCategories } from '../services/feedService'
-import type { Category, ID } from '../types/domain'
+import type { Booking, Category, ID, Post } from '../types/domain'
 
 export function TattooerPortalPage() {
   const auth = useAuth()
   const feed = useFeed()
+  const booking = useBooking()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +30,10 @@ export function TattooerPortalPage() {
   const [postCategoryIds, setPostCategoryIds] = useState<ID[]>([])
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [artistBookings, setArtistBookings] = useState<Booking[]>([])
+  const [myPosts, setMyPosts] = useState<Post[]>([])
+  const [editingPostId, setEditingPostId] = useState<ID | null>(null)
+  const [editingPostDescription, setEditingPostDescription] = useState('')
 
   const canRegister = useMemo(() => {
     return (
@@ -69,6 +75,39 @@ export function TattooerPortalPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      if (auth.user?.role !== 'tattooer' || !auth.user.artistId) {
+        if (!cancelled) {
+          setArtistBookings([])
+          setMyPosts([])
+        }
+        return
+      }
+
+      try {
+        const [nextBookings, nextMyPosts] = await Promise.all([
+          booking.listBookingsByArtist(auth.user.artistId),
+          feed.listMyPosts(),
+        ])
+        if (!cancelled) {
+          setArtistBookings(nextBookings)
+          setMyPosts(nextMyPosts)
+        }
+      } catch {
+        if (!cancelled) {
+          setArtistBookings([])
+          setMyPosts([])
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [auth.user?.artistId, auth.user?.role, booking, feed, feed.posts])
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 md:px-16">
@@ -363,6 +402,107 @@ export function TattooerPortalPage() {
       </section>
 
       {status ? <p className="mt-6 text-sm text-[#d6a4a4]">{status}</p> : null}
+
+      <section className="mt-6 border border-white/10 bg-[#0a0a0a] p-6 md:p-8">
+        <h2 className="font-[var(--font-display)] text-white text-2xl">Moje rezervácie</h2>
+        {auth.user?.role !== 'tattooer' ? (
+          <p className="mt-3 text-white/50">Prihlás sa ako tatér a zobrazia sa ti rezervácie.</p>
+        ) : artistBookings.length === 0 ? (
+          <p className="mt-3 text-white/50">Zatiaľ tu nemáš žiadne rezervácie.</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3">
+            {artistBookings.map((item) => (
+              <div key={item.id} className="border border-white/10 p-4 text-white/80">
+                <p>{new Date(item.startsAtIso).toLocaleString('sk-SK')}</p>
+                <p className="text-sm text-white/60">
+                  {item.clientName} • {item.clientEmail}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-6 border border-white/10 bg-[#0a0a0a] p-6 md:p-8">
+        <h2 className="font-[var(--font-display)] text-white text-2xl">Moje posty</h2>
+        {auth.user?.role !== 'tattooer' ? (
+          <p className="mt-3 text-white/50">Prihlás sa ako tatér a zobrazia sa ti tvoje posty.</p>
+        ) : myPosts.length === 0 ? (
+          <p className="mt-3 text-white/50">Zatiaľ nemáš žiadny post.</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-4">
+            {myPosts.map((post) => (
+              <div key={post.id} className="border border-white/10 p-4">
+                <p className="text-white/80">{post.description}</p>
+                {editingPostId === post.id ? (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <textarea
+                      className="bg-black/40 border border-white/10 px-4 py-3 text-white min-h-24"
+                      value={editingPostDescription}
+                      onChange={(e) => setEditingPostDescription(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="border border-[#d6a4a4] px-4 py-2 text-xs text-[#d6a4a4]"
+                        onClick={async () => {
+                          try {
+                            await feed.updatePost(post.id, { description: editingPostDescription })
+                            setEditingPostId(null)
+                            setEditingPostDescription('')
+                            setStatus('Post bol upravený.')
+                          } catch (error) {
+                            setStatus(error instanceof Error ? error.message : 'Nepodarilo sa upraviť post.')
+                          }
+                        }}
+                      >
+                        Uložiť
+                      </button>
+                      <button
+                        type="button"
+                        className="border border-white/20 px-4 py-2 text-xs text-white/70"
+                        onClick={() => {
+                          setEditingPostId(null)
+                          setEditingPostDescription('')
+                        }}
+                      >
+                        Zrušiť
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex gap-3">
+                    <button
+                      type="button"
+                      className="text-xs text-white/50 hover:text-[#d6a4a4]"
+                      onClick={() => {
+                        setEditingPostId(post.id)
+                        setEditingPostDescription(post.description)
+                      }}
+                    >
+                      Upraviť
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-white/50 hover:text-[#d6a4a4]"
+                      onClick={async () => {
+                        try {
+                          await feed.deletePost(post.id)
+                          setStatus('Post bol zmazaný.')
+                        } catch (error) {
+                          setStatus(error instanceof Error ? error.message : 'Nepodarilo sa vymazať post.')
+                        }
+                      }}
+                    >
+                      Vymazať
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

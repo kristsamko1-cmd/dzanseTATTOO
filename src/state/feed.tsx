@@ -9,6 +9,8 @@ type FeedContextValue = {
   refresh: () => Promise<void>
   toggleLike: (postId: ID) => Promise<void>
   addComment: (postId: ID, message: string) => Promise<void>
+  updateComment: (commentId: ID, message: string) => Promise<void>
+  deleteComment: (commentId: ID) => Promise<void>
   createPost: (input: {
     description: string
     galleryImageUrls: string[]
@@ -17,6 +19,9 @@ type FeedContextValue = {
     style?: string
     categoryIds: ID[]
   }) => Promise<void>
+  listMyPosts: () => Promise<Post[]>
+  updatePost: (postId: ID, input: { description: string }) => Promise<void>
+  deletePost: (postId: ID) => Promise<void>
   getPostDetails: (postId: ID) => Promise<{
     post: Post
     liked: boolean
@@ -63,6 +68,22 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
     [refresh],
   )
 
+  const updateComment = useCallback(
+    async (commentId: ID, message: string) => {
+      await feedService.updateComment(commentId, message)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  const deleteComment = useCallback(
+    async (commentId: ID) => {
+      await feedService.deleteComment(commentId)
+      await refresh()
+    },
+    [refresh],
+  )
+
   const value = useMemo<FeedContextValue>(() => {
     return {
       posts,
@@ -71,13 +92,24 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
       refresh,
       toggleLike,
       addComment,
+      updateComment,
+      deleteComment,
       createPost: async (input) => {
         await feedService.createPost(input)
         await refresh()
       },
+      listMyPosts: feedService.listMyPosts,
+      updatePost: async (postId, input) => {
+        await feedService.updatePost(postId, input)
+        await refresh()
+      },
+      deletePost: async (postId) => {
+        await feedService.deletePost(postId)
+        await refresh()
+      },
       getPostDetails: feedService.getPost,
     }
-  }, [posts, likedByPostId, loading, refresh, toggleLike, addComment])
+  }, [posts, likedByPostId, loading, refresh, toggleLike, addComment, updateComment, deleteComment])
 
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>
 }

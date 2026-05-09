@@ -207,6 +207,21 @@ export async function addAnonymousComment(postId: ID, message: string) {
   return comment
 }
 
+export async function updateComment(commentId: ID, message: string) {
+  const trimmed = message.trim()
+  if (trimmed.length < 2) {
+    throw new Error('Komentár je príliš krátky.')
+  }
+
+  const { error } = await supabase.from('post_comments').update({ message: trimmed }).eq('id', commentId)
+  if (error) throw error
+}
+
+export async function deleteComment(commentId: ID) {
+  const { error } = await supabase.from('post_comments').delete().eq('id', commentId)
+  if (error) throw error
+}
+
 export async function createPost(input: {
   description: string
   galleryImageUrls: string[]
@@ -282,7 +297,56 @@ export async function createPost(input: {
 
 export async function listCategories(): Promise<Category[]> {
   const { data, error } = await supabase.from('categories').select('id,name').order('name', { ascending: true })
+  if (!error) return (data ?? []).map((row) => ({ id: row.id, name: row.name }))
+
+  if (error.code !== '42501') throw error
+  const fallback = await supabase.from('posts_feed_v').select('category_ids,category_names')
+  if (fallback.error) throw fallback.error
+
+  const byName = new Map<string, Category>()
+  for (const row of fallback.data ?? []) {
+    const ids = (row.category_ids ?? []) as string[]
+    const names = (row.category_names ?? []) as string[]
+    for (let i = 0; i < Math.min(ids.length, names.length); i++) {
+      const id = ids[i]
+      const name = names[i]
+      if (id && name && !byName.has(name)) byName.set(name, { id, name })
+    }
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, 'sk'))
+}
+
+export async function listMyPosts() {
+  const { data: userData } = await supabase.auth.getUser()
+  const user = userData.user
+  if (!user) throw new Error('Najprv sa prihlás ako tatér.')
+
+  const { data: artist, error: artistError } = await supabase
+    .from('artists')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (artistError) throw artistError
+  if (!artist) return []
+
+  const { data, error } = await supabase
+    .from('posts_feed_v')
+    .select('id,artist_id,image_url,gallery_image_urls,description,created_at,like_count,comment_count,category_ids,category_names')
+    .eq('artist_id', artist.id)
+    .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []).map((row) => ({ id: row.id, name: row.name }))
+  return (data ?? []).map((row) => mapPost(row as FeedRow))
+}
+
+export async function updatePost(postId: ID, input: { description: string }) {
+  const description = input.description.trim()
+  if (description.length < 10) throw new Error('Popis postu musí mať aspoň 10 znakov.')
+  const { error } = await supabase.from('posts').update({ description }).eq('id', postId)
+  if (error) throw error
+}
+
+export async function deletePost(postId: ID) {
+  const { error } = await supabase.from('posts').delete().eq('id', postId)
+  if (error) throw error
 }
 

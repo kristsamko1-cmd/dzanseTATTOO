@@ -36,7 +36,6 @@ export function AppHeader() {
           <HeaderLink to="/galeria">Galéria</HeaderLink>
           <HeaderLink to="/pribehy">Príbehy</HeaderLink>
           <HeaderLink to="/taters">Tatéri</HeaderLink>
-          <HeaderLink to="/tater">Portál tatéra</HeaderLink>
         </div>
 
         <div className="flex items-center gap-3">
@@ -68,9 +67,6 @@ export function AppHeader() {
             </NavLink>
             <NavLink to="/taters" onClick={() => setOpen(false)} className="text-white/80 uppercase tracking-widest">
               Tatéri
-            </NavLink>
-            <NavLink to="/tater" onClick={() => setOpen(false)} className="text-white/80 uppercase tracking-widest">
-              Portál tatéra
             </NavLink>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../state/auth'
 import { useArtists } from '../../state/artists'
 import { useFeed } from '../../state/feed'
 import { PostCard } from '../../components/feed/PostCard'
@@ -9,6 +10,7 @@ import { listCategories } from '../../services/feedService'
 import { CommentDrawer } from './components/CommentDrawer'
 
 export function FeedPage() {
+  const auth = useAuth()
   const { getArtist } = useArtists()
   const feed = useFeed()
   const [openPostId, setOpenPostId] = useState<ID | null>(null)
@@ -193,8 +195,20 @@ export function FeedPage() {
       <CommentDrawer
         postId={openPostId}
         onClose={() => setOpenPostId(null)}
+        canModerate={Boolean(
+          openPostId &&
+            auth.user?.role === 'tattooer' &&
+            auth.user.artistId &&
+            posts.find((p) => p.id === openPostId)?.artistId === auth.user.artistId,
+        )}
         onAdd={async (postId, message) => {
           await feed.addComment(postId, message)
+        }}
+        onEdit={async (commentId, message) => {
+          await feed.updateComment(commentId, message)
+        }}
+        onDelete={async (commentId) => {
+          await feed.deleteComment(commentId)
         }}
       />
     </div>

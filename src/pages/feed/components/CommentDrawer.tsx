@@ -8,10 +8,16 @@ export function CommentDrawer({
   postId,
   onClose,
   onAdd,
+  canModerate,
+  onEdit,
+  onDelete,
 }: {
   postId: ID | null
   onClose: () => void
   onAdd: (postId: ID, message: string) => Promise<void>
+  canModerate?: boolean
+  onEdit?: (commentId: ID, message: string) => Promise<void>
+  onDelete?: (commentId: ID) => Promise<void>
 }) {
   const { getPostDetails } = useFeed()
   const [loading, setLoading] = useState(false)
@@ -77,12 +83,33 @@ export function CommentDrawer({
             ) : (
               <CommentSection
                 comments={comments}
+                canModerate={canModerate}
                 onAdd={async (message) => {
                   if (!postId) return
                   await onAdd(postId, message)
                   const details = await getPostDetails(postId)
                   setComments(details.comments)
                 }}
+                onEdit={
+                  onEdit
+                    ? async (commentId, message) => {
+                        if (!postId) return
+                        await onEdit(commentId, message)
+                        const details = await getPostDetails(postId)
+                        setComments(details.comments)
+                      }
+                    : undefined
+                }
+                onDelete={
+                  onDelete
+                    ? async (commentId) => {
+                        if (!postId) return
+                        await onDelete(commentId)
+                        const details = await getPostDetails(postId)
+                        setComments(details.comments)
+                      }
+                    : undefined
+                }
               />
             )}
           </motion.div>
