@@ -130,28 +130,6 @@ export function FeedPage() {
             </ul>
           </div>
 
-          <div className="bg-[#1a1a1a] p-10 border border-white/5">
-            <h3 className="font-[var(--font-display)] text-white text-3xl mb-4">Zostaňte v kontakte</h3>
-            <p className="font-[var(--font-sans)] text-white/50 mb-8">
-              Dostávajte upozornenia o nových príspevkoch a voľných termínoch priamo do schránky.
-            </p>
-            <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
-              <div className="border-b border-white/20 pb-2">
-                <label className="font-[var(--font-serif)] text-[10px] text-[#d6a4a4] uppercase tracking-widest block mb-1">
-                  Váš Email
-                </label>
-                <input
-                  className="bg-transparent border-none w-full text-white placeholder:text-white/20 focus:ring-0 p-0 font-[var(--font-sans)]"
-                  placeholder="email@example.com"
-                  type="email"
-                />
-              </div>
-              <button className="w-full bg-[#d6a4a4] text-black py-4 font-[var(--font-serif)] uppercase tracking-[0.2em] text-sm hover:opacity-90 transition-opacity">
-                Odoberať novinky
-              </button>
-            </form>
-          </div>
-
           <div>
             <h3 className="font-[var(--font-serif)] text-[10px] text-white uppercase tracking-[0.3em] mb-8 pb-4 border-b border-white/10">
               Populárne

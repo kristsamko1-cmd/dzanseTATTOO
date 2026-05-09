@@ -98,9 +98,9 @@ export function BookingPage() {
               onChange={(e) => setArtistId(e.target.value)}
               className="w-full md:w-[260px] bg-transparent border border-white/10 px-4 py-3 text-white/80"
             >
-              {artists.length === 0 ? <option value="">Žiadny tatér</option> : null}
+              {artists.length === 0 ? <option className="text-black" value="">Žiadny tatér</option> : null}
               {artists.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option key={a.id} value={a.id} className="text-black">
                   {a.name}
                 </option>
               ))}
@@ -141,15 +141,20 @@ export function BookingPage() {
                       type="button"
                       disabled={!s.available}
                       onClick={() => setSelectedSlotIso(s.startsAtIso)}
+                      aria-pressed={selected}
                       className={clsx(
-                        'border px-4 py-3 text-sm flex items-center justify-between transition-colors',
-                        'border-white/10 text-white/70 hover:border-white/30',
-                        selected && 'border-[#d6a4a4] text-[#d6a4a4]',
+                        'border px-4 py-3 text-sm flex items-center justify-between transition-all duration-150',
+                        'border-white/10 text-white/70 hover:border-white/30 hover:bg-white/[0.03]',
+                        selected &&
+                          'border-[#d6a4a4] text-[#d6a4a4] bg-[#d6a4a4]/10 scale-[1.02] shadow-[0_0_0_1px_rgba(214,164,164,0.35)]',
                         !s.available && 'opacity-40 cursor-not-allowed hover:border-white/10',
                       )}
                     >
                       <span className="font-[var(--font-serif)]">{label}</span>
-                      <span className="text-[10px] uppercase tracking-widest">
+                      <span className="text-[10px] uppercase tracking-widest flex items-center gap-1">
+                        {selected ? (
+                          <span className="material-symbols-outlined text-sm leading-none">check</span>
+                        ) : null}
                         {s.available ? 'voľné' : 'obs.'}
                       </span>
                     </button>
@@ -157,6 +162,15 @@ export function BookingPage() {
                 })
               )}
             </div>
+            {selectedSlotIso ? (
+              <p className="mt-4 text-[#d6a4a4] text-sm">
+                Vybraný čas:{' '}
+                {new Date(selectedSlotIso).toLocaleTimeString('sk-SK', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -180,8 +194,12 @@ export function BookingPage() {
                     note: note.trim() ? note.trim() : undefined,
                     startsAtIso: selectedSlotIso,
                   })
-                  } catch (error) {
-                    setSubmitError(error instanceof Error ? error.message : 'Nepodarilo sa odoslať rezerváciu.')
+                  const refreshed = await listAvailability(artistId, dayIso)
+                  setSlots(refreshed)
+                  setSelectedSlotIso(null)
+                  setNote('')
+                } catch (error) {
+                  setSubmitError(error instanceof Error ? error.message : 'Nepodarilo sa odoslať rezerváciu.')
                 } finally {
                   setSubmitting(false)
                 }

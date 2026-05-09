@@ -103,7 +103,7 @@ export async function listAvailability(artistId: ID, dayIso: string) {
 }
 
 export async function createBooking(input: CreateBookingInput) {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('bookings')
     .insert({
       artist_id: input.artistId,
@@ -112,15 +112,24 @@ export async function createBooking(input: CreateBookingInput) {
       note: input.note ?? null,
       starts_at: input.startsAtIso,
     })
-    .select('id,artist_id,client_name,client_email,note,starts_at,created_at')
-    .single()
   if (error) {
     // Unique constraint collision (slot already taken) is expected occasionally.
     if (error.code === '23505') {
       throw new Error('Tento termín už nie je dostupný. Vyber si prosím iný čas.')
     }
+    if (error.code === '42501') {
+      throw new Error('Rezerváciu sa nepodarilo uložiť kvôli prístupovým pravidlám. Skús to znova o chvíľu.')
+    }
     throw error
   }
-  return mapBooking(data)
+  return {
+    id: crypto.randomUUID(),
+    artistId: input.artistId,
+    clientName: input.clientName,
+    clientEmail: input.clientEmail,
+    note: input.note,
+    startsAtIso: input.startsAtIso,
+    createdAtIso: new Date().toISOString(),
+  }
 }
 
