@@ -6,6 +6,8 @@ import { BookingPage } from './pages/BookingPage'
 import { GalleryPage } from './pages/GalleryPage'
 import { HomePage } from './pages/HomePage'
 import { TermsPage } from './pages/TermsPage'
+import { AdminLoginPage } from './pages/admin/AdminLoginPage'
+import { AdminUsersPage } from './pages/admin/AdminUsersPage'
 import { ArtistProfilePage } from './pages/artists/ArtistProfilePage'
 import { ArtistsPage } from './pages/artists/ArtistsPage'
 import { FeedPage } from './pages/feed/FeedPage'
@@ -34,6 +36,8 @@ function AnimatedRoutes() {
           <Route path="/rezervacia" element={<BookingPage />} />
           <Route path="/podmienky" element={<TermsPage />} />
           <Route path="/tater" element={<TattooerPortalPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin" element={<AdminUsersPage />} />
         </Routes>
       </motion.div>
     </AnimatePresence>

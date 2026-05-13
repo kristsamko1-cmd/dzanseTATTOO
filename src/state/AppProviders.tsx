@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { AdminAuthProvider } from './adminAuth'
 import { ArtistsProvider } from './artists'
 import { AuthProvider } from './auth'
 import { BookingProvider } from './booking'
@@ -14,15 +15,17 @@ function FeedBootstrap({ children }: { children: React.ReactNode }) {
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <ArtistsProvider>
-        <BookingProvider>
-          <FeedProvider>
-            <FeedBootstrap>{children}</FeedBootstrap>
-          </FeedProvider>
-        </BookingProvider>
-      </ArtistsProvider>
-    </AuthProvider>
+    <AdminAuthProvider>
+      <AuthProvider>
+        <ArtistsProvider>
+          <BookingProvider>
+            <FeedProvider>
+              <FeedBootstrap>{children}</FeedBootstrap>
+            </FeedProvider>
+          </BookingProvider>
+        </ArtistsProvider>
+      </AuthProvider>
+    </AdminAuthProvider>
   )
 }
 
